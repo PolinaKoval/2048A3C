@@ -21,7 +21,7 @@ from keras import backend as K
 ENV = 'CartPole-v0'
 from env2048.env2048 import Game2048
 
-RUN_TIME = 3000
+RUN_TIME = 40000
 THREADS = 8
 OPTIMIZERS = 2
 THREAD_DELAY = 0.001
@@ -252,7 +252,7 @@ class Environment(threading.Thread):
 			if done or self.stop_signal:
 				break
 
-		print("Total R:{}\n".format(R))
+		# print("Total R:{}\n".format(R))
 
 	def run(self):
 		while not self.stop_signal:
