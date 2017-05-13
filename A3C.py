@@ -19,15 +19,16 @@ from keras import backend as K
 
 # -- constants
 ENV = 'CartPole-v0'
+from env2048.env2048 import Game2048
 
-RUN_TIME = 30
+RUN_TIME = 3000
 THREADS = 8
 OPTIMIZERS = 2
 THREAD_DELAY = 0.001
 
 GAMMA = 0.99
 
-N_STEP_RETURN = 8
+N_STEP_RETURN = 1
 GAMMA_N = GAMMA ** N_STEP_RETURN
 
 EPS_START = 0.4
@@ -227,7 +228,7 @@ class Environment(threading.Thread):
 		threading.Thread.__init__(self)
 
 		self.render = render
-		self.env = gym.make(ENV)
+		self.env = Game2048(4)
 		self.agent = Agent(eps_start, eps_end, eps_steps)
 
 	def runEpisode(self):
@@ -241,7 +242,6 @@ class Environment(threading.Thread):
 
 			a = self.agent.act(s)
 			s_, r, done, info = self.env.step(a)
-
 			if done:  # terminal state
 				s_ = None
 
@@ -249,11 +249,10 @@ class Environment(threading.Thread):
 
 			s = s_
 			R += r
-
 			if done or self.stop_signal:
 				break
 
-		print("Total R:", R)
+		print("Total R:{}\n".format(R))
 
 	def run(self):
 		while not self.stop_signal:
@@ -280,8 +279,8 @@ class Optimizer(threading.Thread):
 
 # -- main
 env_test = Environment(render=True, eps_start=0., eps_end=0.)
-NUM_STATE = env_test.env.observation_space.shape[0]
-NUM_ACTIONS = env_test.env.action_space.n
+NUM_STATE = env_test.env.observation_space
+NUM_ACTIONS = env_test.env.action_space
 NONE_STATE = np.zeros(NUM_STATE)
 
 brain = Brain()  # brain is global in A3C
