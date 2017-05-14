@@ -10,25 +10,29 @@
 
 import numpy as np
 import tensorflow as tf
-
-import gym, time, random, threading
+import datetime
+import time, random, threading
 
 from keras.models import *
 from keras.layers import *
 from keras import backend as K
-
-# -- constants
-ENV = 'CartPole-v0'
+import argparse
 from env2048.env2048 import Game2048
 
-RUN_TIME = 40000
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-w', action="store_true")
+args = parser.parse_args()
+
+# -- constants
+RUN_TIME = 3600 #1 hour
 THREADS = 8
 OPTIMIZERS = 2
 THREAD_DELAY = 0.001
 
 GAMMA = 0.99
 
-N_STEP_RETURN = 1
+N_STEP_RETURN = 2
 GAMMA_N = GAMMA ** N_STEP_RETURN
 
 EPS_START = 0.4
@@ -47,7 +51,7 @@ class Brain:
 	train_queue = [[], [], [], [], []]  # s, a, r, s', s' terminal mask
 	lock_queue = threading.Lock()
 
-	def __init__(self):
+	def __init__(self, load_weights=False):
 		self.session = tf.Session()
 		K.set_session(self.session)
 		K.manual_variable_initialization(True)
@@ -57,6 +61,9 @@ class Brain:
 
 		self.session.run(tf.global_variables_initializer())
 		self.default_graph = tf.get_default_graph()
+
+		if load_weights and os.path.exists(model_weights_fn):
+			self.load(model_weights_fn)
 
 		self.default_graph.finalize()  # avoid modifications
 
@@ -119,6 +126,10 @@ class Brain:
 
 		s_t, a_t, r_t, minimize = self.graph
 		self.session.run(minimize, feed_dict={s_t: s, a_t: a, r_t: r})
+		global frames;
+		if frames % 200000 == 0:
+			self.load("weights-{}".format(str(datetime.datetime.now())))
+
 
 	def train_push(self, s, a, r, s_):
 		with self.lock_queue:
@@ -147,6 +158,12 @@ class Brain:
 		with self.default_graph.as_default():
 			p, v = self.model.predict(s)
 			return v
+
+	def load(self, name):
+		self.model.load_weights(name)
+
+	def save(self, name):
+		self.model.save_weights(name)
 
 
 # ---------
@@ -252,7 +269,7 @@ class Environment(threading.Thread):
 			if done or self.stop_signal:
 				break
 
-		# print("Total R:{}\n".format(R))
+		print("Total R:{}\n".format(self.env.score))
 
 	def run(self):
 		while not self.stop_signal:
@@ -278,12 +295,13 @@ class Optimizer(threading.Thread):
 
 
 # -- main
-env_test = Environment(render=True, eps_start=0., eps_end=0.)
+model_weights_fn = './2048.h5'
+env_test = Environment(eps_start=0., eps_end=0.)
 NUM_STATE = env_test.env.observation_space
 NUM_ACTIONS = env_test.env.action_space
 NONE_STATE = np.zeros(NUM_STATE)
 
-brain = Brain()  # brain is global in A3C
+brain = Brain(load_weights=args.w)  # brain is global in A3C
 
 envs = [Environment() for i in range(THREADS)]
 opts = [Optimizer() for i in range(OPTIMIZERS)]
@@ -306,5 +324,6 @@ for o in opts:
 for o in opts:
 	o.join()
 
+brain.save(model_weights_fn)
 print("Training finished")
-env_test.run()
+# env_test.run()

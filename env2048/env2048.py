@@ -1,7 +1,7 @@
 import random
-import math
+import numpy as np
 
-from env2048.grid import Grid
+from grid import Grid
 
 
 class Vector(object):
@@ -138,6 +138,6 @@ class Game2048(object):
             if not self._moves_available():
                 self.over = True
 
-        reward = self.score - start_score
+        reward = -1 if not moved else np.clip(self.score - start_score, 0, 1)
 
         return self.grid.get_values(), reward, self.won or self.over, moved
