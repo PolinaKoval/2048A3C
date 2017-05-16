@@ -10,7 +10,7 @@
 
 import numpy as np
 import tensorflow as tf
-import datetime
+from datetime import datetime
 import time, random, threading
 
 from keras.models import *
@@ -21,7 +21,9 @@ from env2048.env2048 import Game2048
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-w', action="store_true")
+parser.add_argument('-w', action="store_true") #load weights
+parser.add_argument('-t', action="store_true") #test mode
+parser.add_argument('-p', action="store_true") #print score
 args = parser.parse_args()
 
 # -- constants
@@ -29,6 +31,8 @@ RUN_TIME = 3600 #1 hour
 THREADS = 8
 OPTIMIZERS = 2
 THREAD_DELAY = 0.001
+SAVE_INTERVAL = 30000
+k = 1
 
 GAMMA = 0.99
 
@@ -64,6 +68,7 @@ class Brain:
 
 		if load_weights and os.path.exists(model_weights_fn):
 			self.load(model_weights_fn)
+			print("weights loaded")
 
 		self.default_graph.finalize()  # avoid modifications
 
@@ -126,9 +131,12 @@ class Brain:
 
 		s_t, a_t, r_t, minimize = self.graph
 		self.session.run(minimize, feed_dict={s_t: s, a_t: a, r_t: r})
-		global frames;
-		if frames % 200000 == 0:
-			self.load("weights-{}".format(str(datetime.datetime.now())))
+		global frames, k;
+		if frames >= SAVE_INTERVAL * k:
+			k += 1
+			print(datetime.now())
+			print("Saved weights for {} frames".format(frames))
+			self.save(model_weights_fn)
 
 
 	def train_push(self, s, a, r, s_):
@@ -197,8 +205,8 @@ class Agent:
 			s = np.array([s])
 			p = brain.predict_p(s)[0]
 
-			# a = np.argmax(p)
-			a = np.random.choice(NUM_ACTIONS, p=p)
+			a = np.argmax(p)
+			# a = np.random.choice(NUM_ACTIONS, p=p)
 
 			return a
 
@@ -252,13 +260,14 @@ class Environment(threading.Thread):
 		s = self.env.reset()
 
 		R = 0
+		moved = True
 		while True:
 			time.sleep(THREAD_DELAY)  # yield
 
 			if self.render: self.env.render()
 
 			a = self.agent.act(s)
-			s_, r, done, info = self.env.step(a)
+			s_, r, done, moved = self.env.step(a)
 			if done:  # terminal state
 				s_ = None
 
@@ -269,7 +278,8 @@ class Environment(threading.Thread):
 			if done or self.stop_signal:
 				break
 
-		print("Total R:{}\n".format(self.env.score))
+		if args.p:
+			print("Total R:{}\n".format(self.env.score))
 
 	def run(self):
 		while not self.stop_signal:
@@ -306,24 +316,28 @@ brain = Brain(load_weights=args.w)  # brain is global in A3C
 envs = [Environment() for i in range(THREADS)]
 opts = [Optimizer() for i in range(OPTIMIZERS)]
 
-for o in opts:
-	o.start()
+if args.t:
+	print('Test')
+	env_test.run()
+else:
+	print("Start training")
+	for o in opts:
+		o.start()
 
-for e in envs:
-	e.start()
+	for e in envs:
+		e.start()
 
-time.sleep(RUN_TIME)
+	time.sleep(RUN_TIME)
 
-for e in envs:
-	e.stop()
-for e in envs:
-	e.join()
+	for e in envs:
+		e.stop()
+	for e in envs:
+		e.join()
 
-for o in opts:
-	o.stop()
-for o in opts:
-	o.join()
+	for o in opts:
+		o.stop()
+	for o in opts:
+		o.join()
 
-brain.save(model_weights_fn)
-print("Training finished")
-# env_test.run()
+	brain.save(model_weights_fn)
+	print("Training finished")
