@@ -19,15 +19,16 @@ from keras import backend as K
 import argparse
 from env2048.env2048 import Game2048
 
-
 parser = argparse.ArgumentParser()
-parser.add_argument('-w', action="store_true") #load weights
-parser.add_argument('-t', action="store_true") #test mode
-parser.add_argument('-p', action="store_true") #print score
+parser.add_argument('-w', action="store_true")  # load weights
+parser.add_argument('-test', action="store_true")  # test mode
+parser.add_argument('-p', action="store_true")  # print score
+parser.add_argument("--time", "-t", type=int, default=3600)
 args = parser.parse_args()
 
 # -- constants
-RUN_TIME = 3600 #1 hour
+print args.time
+RUN_TIME = args.time  # 1 hour
 THREADS = 8
 OPTIMIZERS = 2
 THREAD_DELAY = 0.001
@@ -97,7 +98,8 @@ class Brain:
 
 		loss_policy = - log_prob * tf.stop_gradient(advantage)  # maximize policy
 		loss_value = LOSS_V * tf.square(advantage)  # minimize value error
-		entropy = LOSS_ENTROPY * tf.reduce_sum(p * tf.log(p + 1e-10), axis=1, keep_dims=True)  # maximize entropy (regularization)
+		entropy = LOSS_ENTROPY * tf.reduce_sum(p * tf.log(p + 1e-10), axis=1,
+											   keep_dims=True)  # maximize entropy (regularization)
 
 		loss_total = tf.reduce_mean(loss_policy + loss_value + entropy)
 
@@ -137,7 +139,6 @@ class Brain:
 			print(datetime.now())
 			print("Saved weights for {} frames".format(frames))
 			self.save(model_weights_fn)
-
 
 	def train_push(self, s, a, r, s_):
 		with self.lock_queue:
@@ -316,7 +317,7 @@ brain = Brain(load_weights=args.w)  # brain is global in A3C
 envs = [Environment() for i in range(THREADS)]
 opts = [Optimizer() for i in range(OPTIMIZERS)]
 
-if args.t:
+if args.test:
 	print('Test')
 	env_test.run()
 else:
