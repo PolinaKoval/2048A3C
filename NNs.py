@@ -38,7 +38,7 @@ def make_input_3(grid):
 
 
 # input_layer, last_layer, placeholder, make_input, none_state
-def NN_0(mask):
+def only_dense_5_layers_256(mask):
 	shape = NUM_STATE * POWER if mask else NUM_STATE
 
 	input_layer = Input(batch_shape=(None, shape))
@@ -54,7 +54,7 @@ def NN_0(mask):
 
 	return input_layer, last_layer, s, make_input, NONE_STATE
 
-def NN_1(mask):
+def conv2x2_layer_and_3_dense(mask):
 	channels = POWER if mask else 1
 	shape = (GRID_SIZE, GRID_SIZE, channels)
 
@@ -71,7 +71,7 @@ def NN_1(mask):
 
 	return input_layer, last_layer, s, make_input, NONE_STATE
 
-def NN_2(mask):
+def two_conv_rect_layers_and_3_dense(mask):
 	channels = POWER if mask else 1
 	shape = (GRID_SIZE, GRID_SIZE, channels)
 
@@ -90,7 +90,7 @@ def NN_2(mask):
 
 	return input_layer, last_layer, s, make_input, NONE_STATE
 
-def NN_3(mask):
+def only_dense_6_layers_512(mask):
 	shape = NUM_STATE * POWER if mask else NUM_STATE
 
 	input_layer = Input(batch_shape=(None, shape))
@@ -107,7 +107,26 @@ def NN_3(mask):
 
 	return input_layer, last_layer, s, make_input, NONE_STATE
 
-NNs = [NN_0, NN_1, NN_2, NN_3]
+def two_dense_256(mask):
+	shape = NUM_STATE * POWER if mask else NUM_STATE
+
+	input_layer = Input(batch_shape=(None, shape))
+	l_dense0 = Dense(256, activation='relu')(input_layer)
+	last_layer = Dense(256, activation='relu')(l_dense0)
+
+	NONE_STATE = np.zeros(shape)
+	s = tf.placeholder(tf.float32, shape=(None, shape))
+	make_input = make_input_1 if mask else make_input_0
+
+	return input_layer, last_layer, s, make_input, NONE_STATE
+
+NNs = [
+	only_dense_5_layers_256,
+	conv2x2_layer_and_3_dense,
+	two_conv_rect_layers_and_3_dense,
+	only_dense_6_layers_512,
+	two_dense_256,
+]
 
 def getNN(num=0, mask=False):
 	return NNs[num](mask)
