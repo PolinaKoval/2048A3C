@@ -15,14 +15,18 @@ class Traversals(object):
         self.x = x
         self.y = y
         
-
+# env types:
+# 0 - normal
+# 1 - reward in [-1, 0, 1]
+# 2 - finish game when grid was not moved
 class Game2048(object):
     
-    def __init__(self, size):
+    def __init__(self, size, env_type=0):
         self.size = size
         self.start_tiles = 2
         self.action_space = 4
         self.observation_space = 16
+        self.env_type = env_type
 
         self.over = False
         self.won = False
@@ -138,6 +142,12 @@ class Game2048(object):
             if not self._moves_available():
                 self.over = True
 
-        reward = -1 if not moved else np.clip(self.score - start_score, 0, 1)
+        reward = self.score - start_score
+        if self.env_type == 1:
+            reward = -1 if not moved else min(reward, 1)
 
-        return self.grid.get_values(), reward, self.won or self.over, moved
+        is_terminated_state = self.won or self.over
+        if self.env_type == 2:
+            is_terminated_state = is_terminated_state or not moved
+
+        return self.grid.get_values(), reward, is_terminated_state, moved

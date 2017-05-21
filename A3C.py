@@ -1,93 +1,88 @@
-# OpenGym CartPole-v0 with A3C on GPU
-# -----------------------------------
-#
-# A3C implementation with GPU optimizer threads.
-# 
-# Made as part of blog series Let's make an A3C, available at
-# https://jaromiru.com/2017/02/16/lets-make-an-a3c-theory/
-#
-# author: Jaromir Janisch, 2017
-
 import numpy as np
+import pandas as pd
 import tensorflow as tf
 from datetime import datetime
 import time, random, threading
-
+from pandas import DataFrame
 from keras.models import *
 from keras.layers import *
 from keras import backend as K
+from NNs import getNN
 import argparse
 from env2048.env2048 import Game2048
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-w', action="store_true")  # load weights
-parser.add_argument('-test', action="store_true")  # test mode
+parser.add_argument('--test', action="store_true")  # test mode
 parser.add_argument('-p', action="store_true")  # print score
-parser.add_argument("--time", "-t", type=int, default=3600)
+parser.add_argument("--time", "-t", type=int, default=36000)
+parser.add_argument("--env_type", type=int, default=0)
+parser.add_argument("--nn_type", type=int, default=0)
+parser.add_argument('--mask', action="store_true")
 args = parser.parse_args()
 
 # -- constants
-print args.time
-RUN_TIME = args.time  # 1 hour
+RUN_TIME = args.time
 THREADS = 8
 OPTIMIZERS = 2
-THREAD_DELAY = 0.001
+THREAD_DELAY = 0.002
 SAVE_INTERVAL = 30000
 k = 1
 
 GAMMA = 0.99
 
-N_STEP_RETURN = 2
+N_STEP_RETURN = 1
 GAMMA_N = GAMMA ** N_STEP_RETURN
 
-EPS_START = 0.4
+EPS_START = 0.9
 EPS_STOP = .15
 EPS_STEPS = 75000
 
-MIN_BATCH = 32
-LEARNING_RATE = 5e-3
+MIN_BATCH = 100
+LEARNING_RATE = 5e-4
 
-LOSS_V = .5  # v loss coefficient
+LOSS_V = .4  # v loss coefficient
 LOSS_ENTROPY = .01  # entropy coefficient
-
+POWER = 11
+STAT_FILE = "experiments/nn{}_env{}_mask{}_Stat.csv".format(args.nn_type, args.env_type, args.mask)
+WEIGHTS_FILE = "experiments/nn{}_env{}_mask{}_weights.h5".format(args.nn_type, args.env_type, args.mask)
 
 # ---------
 class Brain:
 	train_queue = [[], [], [], [], []]  # s, a, r, s', s' terminal mask
 	lock_queue = threading.Lock()
 
-	def __init__(self, load_weights=False):
+	def __init__(self, nn=0, mask=False, load_weights=False):
+		input_layer, last_layer, placeholder, make_input, NONE_STATE = getNN(nn, mask);
+		self.NONE_STATE = NONE_STATE
+		self.make_input = make_input
 		self.session = tf.Session()
 		K.set_session(self.session)
 		K.manual_variable_initialization(True)
 
-		self.model = self._build_model()
-		self.graph = self._build_graph(self.model)
+		self.model = self._build_model(input_layer, last_layer)
+		self.graph = self._build_graph(self.model, placeholder)
 
 		self.session.run(tf.global_variables_initializer())
 		self.default_graph = tf.get_default_graph()
 
-		if load_weights and os.path.exists(model_weights_fn):
-			self.load(model_weights_fn)
+		if load_weights and os.path.exists(WEIGHTS_FILE):
+			self.load(WEIGHTS_FILE)
 			print("weights loaded")
 
 		self.default_graph.finalize()  # avoid modifications
 
-	def _build_model(self):
+	def _build_model(self, input_layer, last_layer):
+		out_actions = Dense(NUM_ACTIONS, activation='softmax')(last_layer)
+		out_value = Dense(1, activation='linear')(last_layer)
 
-		l_input = Input(batch_shape=(None, NUM_STATE))
-		l_dense = Dense(16, activation='relu')(l_input)
-
-		out_actions = Dense(NUM_ACTIONS, activation='softmax')(l_dense)
-		out_value = Dense(1, activation='linear')(l_dense)
-
-		model = Model(inputs=[l_input], outputs=[out_actions, out_value])
+		model = Model(inputs=[input_layer], outputs=[out_actions, out_value])
 		model._make_predict_function()  # have to initialize before threading
 
 		return model
 
-	def _build_graph(self, model):
-		s_t = tf.placeholder(tf.float32, shape=(None, NUM_STATE))
+	def _build_graph(self, model, placeholder):
+		s_t = placeholder
 		a_t = tf.placeholder(tf.float32, shape=(None, NUM_ACTIONS))
 		r_t = tf.placeholder(tf.float32, shape=(None, 1))  # not immediate, but discounted n step reward
 
@@ -120,10 +115,10 @@ class Brain:
 			s, a, r, s_, s_mask = self.train_queue
 			self.train_queue = [[], [], [], [], []]
 
-		s = np.vstack(s)
+		s = np.array(s)
 		a = np.vstack(a)
 		r = np.vstack(r)
-		s_ = np.vstack(s_)
+		s_ = np.array(s_)
 		s_mask = np.vstack(s_mask)
 
 		if len(s) > 5 * MIN_BATCH: print("Optimizer alert! Minimizing batch of %d" % len(s))
@@ -133,12 +128,13 @@ class Brain:
 
 		s_t, a_t, r_t, minimize = self.graph
 		self.session.run(minimize, feed_dict={s_t: s, a_t: a, r_t: r})
-		global frames, k;
+		global frames, k, df;
 		if frames >= SAVE_INTERVAL * k:
 			k += 1
 			print(datetime.now())
-			print("Saved weights for {} frames".format(frames))
-			self.save(model_weights_fn)
+			print("Saved weights and statistics for {} frames".format(frames))
+			df.to_csv(STAT_FILE, index=False)
+			self.save(WEIGHTS_FILE)
 
 	def train_push(self, s, a, r, s_):
 		with self.lock_queue:
@@ -147,7 +143,7 @@ class Brain:
 			self.train_queue[2].append(r)
 
 			if s_ is None:
-				self.train_queue[3].append(NONE_STATE)
+				self.train_queue[3].append(brain.NONE_STATE)
 				self.train_queue[4].append(0.)
 			else:
 				self.train_queue[3].append(s_)
@@ -247,19 +243,27 @@ class Agent:
 
 
 # ---------
+scores = []
+set_of_states = []
+# df = pd.read_csv('convergence.csv')
+df = pd.DataFrame(columns=['AverageScore', 'AverageValueFn'])
+
 class Environment(threading.Thread):
 	stop_signal = False
 
-	def __init__(self, render=False, eps_start=EPS_START, eps_end=EPS_STOP, eps_steps=EPS_STEPS):
+	def __init__(self, render=False, eps_start=EPS_START, eps_end=EPS_STOP, eps_steps=EPS_STEPS, env_type=0):
 		threading.Thread.__init__(self)
 
 		self.render = render
-		self.env = Game2048(4)
+		self.env = Game2048(4, env_type)
 		self.agent = Agent(eps_start, eps_end, eps_steps)
 
 	def runEpisode(self):
-		s = self.env.reset()
 
+		s = self.env.reset()
+		if len(set_of_states) < 30 and not any(np.array_equal(x, s) for x in set_of_states):
+			set_of_states.append(s)
+		s = brain.make_input(s)
 		R = 0
 		moved = True
 		while True:
@@ -269,6 +273,7 @@ class Environment(threading.Thread):
 
 			a = self.agent.act(s)
 			s_, r, done, moved = self.env.step(a)
+			s_ = brain.make_input(s_)
 			if done:  # terminal state
 				s_ = None
 
@@ -278,6 +283,13 @@ class Environment(threading.Thread):
 			R += r
 			if done or self.stop_signal:
 				break
+
+		scores.append(self.env.score)
+
+		if len(scores) > 500 and len(set_of_states) >= 30:
+			v_fn = brain.predict_v(np.array(map(brain.make_input, set_of_states)))
+			df.loc[df.shape[0]] = [np.average(scores), np.average(v_fn)]
+			scores.pop(0)
 
 		if args.p:
 			print("Total R:{}\n".format(self.env.score))
@@ -306,15 +318,13 @@ class Optimizer(threading.Thread):
 
 
 # -- main
-model_weights_fn = './2048.h5'
-env_test = Environment(eps_start=0., eps_end=0.)
+env_test = Environment(eps_start=0.1, eps_end=0.1, env_type=args.env_type)
 NUM_STATE = env_test.env.observation_space
 NUM_ACTIONS = env_test.env.action_space
-NONE_STATE = np.zeros(NUM_STATE)
 
-brain = Brain(load_weights=args.w)  # brain is global in A3C
+brain = Brain(nn=args.nn_type, load_weights=args.w, mask=args.mask)  # brain is global in A3C
 
-envs = [Environment() for i in range(THREADS)]
+envs = [Environment(env_type=args.env_type) for i in range(THREADS)]
 opts = [Optimizer() for i in range(OPTIMIZERS)]
 
 if args.test:
@@ -340,5 +350,5 @@ else:
 	for o in opts:
 		o.join()
 
-	brain.save(model_weights_fn)
-	print("Training finished")
+	brain.save(WEIGHTS_FILE)
+	print("Training is completed")
