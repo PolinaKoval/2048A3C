@@ -288,7 +288,7 @@ class Environment(threading.Thread):
 
 		if len(scores) > 500 and len(set_of_states) >= 30:
 			v_fn = brain.predict_v(np.array(map(brain.make_input, set_of_states)))
-			df.loc[df.shape[0]] = [np.average(scores), max(v_fn)]
+			df.loc[df.shape[0]] = [np.average(scores), np.max(v_fn)]
 			scores.pop(0)
 
 		if args.p:

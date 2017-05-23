@@ -58,7 +58,7 @@ def conv2x2_layer_and_3_dense(mask):
 	channels = POWER if mask else 1
 	shape = (GRID_SIZE, GRID_SIZE, channels)
 
-	input_layer = Input(shape=(GRID_SIZE, GRID_SIZE, 1))
+	input_layer = Input(shape=shape)
 	conv_layer = Convolution2D(100, (2, 2), activation='relu')(input_layer)
 	ft = Flatten()(conv_layer)
 	l_dense = Dense(256, activation='relu')(ft)
@@ -75,7 +75,7 @@ def two_conv_rect_layers_and_3_dense(mask):
 	channels = POWER if mask else 1
 	shape = (GRID_SIZE, GRID_SIZE, channels)
 
-	input_layer = Input(shape=(GRID_SIZE, GRID_SIZE, channels))
+	input_layer = Input(shape=shape)
 	conv_layer21 = Convolution2D(20, (2, 1), activation='relu')(input_layer)
 	conv_layer12 = Convolution2D(20, (1, 2), activation='relu')(input_layer)
 	ft = Flatten()
@@ -124,7 +124,7 @@ def two_conv_rect_layers_merge_with_input_and_3_dense(mask):
 	channels = POWER if mask else 1
 	shape = (GRID_SIZE, GRID_SIZE, channels)
 
-	input_layer = Input(shape=(GRID_SIZE, GRID_SIZE, channels))
+	input_layer = Input(shape=shape)
 	conv_layer21 = Convolution2D(20, (2, 1), activation='relu')(input_layer)
 	conv_layer12 = Convolution2D(20, (1, 2), activation='relu')(input_layer)
 	ft = Flatten()
