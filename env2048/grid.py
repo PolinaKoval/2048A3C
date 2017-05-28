@@ -29,6 +29,12 @@ class Grid(object):
                 cells.append(x.value)
         return cells
 
+    def set_values(self, cells):
+        i = 0
+        for row in self.cells:
+            for x in row:
+                x.value = cells[i]
+                i += 1
 
 class Tile(object):
     def __init__(self, x, y, value):
