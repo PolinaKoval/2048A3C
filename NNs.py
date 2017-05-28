@@ -4,7 +4,7 @@ import numpy as np
 
 NUM_STATE = 16
 GRID_SIZE = 4
-POWER = 11
+POWER = 12
 
 table = {2 ** i: i for i in range(1, POWER)}
 table[0] = 0
