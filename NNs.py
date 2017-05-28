@@ -168,6 +168,73 @@ def two_dense_1024(mask):
 
 	return input_layer, last_layer, s, make_input, NONE_STATE
 
+
+def four_conv_rect_1024_layers(mask):
+	channels = POWER if mask else 1
+	shape = (GRID_SIZE, GRID_SIZE, channels)
+
+	input_layer = Input(shape=shape)
+	conv_layer_a = Convolution2D(1024, (2, 1), activation='relu')(input_layer)
+	conv_layer_b = Convolution2D(1024, (1, 2), activation='relu')(input_layer)
+	conv_layer_ab = Convolution2D(1024, (1, 2), activation='relu')(conv_layer_a)
+	conv_layer_ba = Convolution2D(1024, (2, 1), activation='relu')(conv_layer_b)
+	ft = Flatten()
+	merge_layer = concatenate([ft(x) for x in[conv_layer_ab, conv_layer_ba, conv_layer_a, conv_layer_b]])
+	last_layer = Dense(32, activation='relu')(merge_layer)
+
+	NONE_STATE = np.zeros(shape=shape)
+	make_input = make_input_3 if mask else make_input_2
+	s = tf.placeholder(tf.float32, shape=(None, GRID_SIZE, GRID_SIZE, channels))
+
+	return input_layer, last_layer, s, make_input, NONE_STATE
+
+def conv2x2_only(mask):
+	channels = POWER if mask else 1
+	shape = (GRID_SIZE, GRID_SIZE, channels)
+
+	input_layer = Input(shape=shape)
+	conv_layer = Convolution2D(4096, (2, 2), activation='relu')(input_layer)
+	last_layer = Flatten()(conv_layer)
+
+	NONE_STATE = np.zeros(shape=shape)
+	make_input = make_input_3 if mask else make_input_2
+	s = tf.placeholder(tf.float32, shape=(None, GRID_SIZE, GRID_SIZE, channels))
+
+	return input_layer, last_layer, s, make_input, NONE_STATE
+
+
+def conv2x2_4096_and_two_dense_1024(mask):
+	channels = POWER if mask else 1
+	shape = (GRID_SIZE, GRID_SIZE, channels)
+
+	input_layer = Input(shape=shape)
+	conv_layer = Convolution2D(4096, (2, 2), activation='relu')(input_layer)
+	ft = Flatten()(conv_layer)
+	l_dense0 = Dense(1024, activation='relu')(ft)
+	last_layer = Dense(1024, activation='relu')(l_dense0)
+
+	NONE_STATE = np.zeros(shape=shape)
+	make_input = make_input_3 if mask else make_input_2
+	s = tf.placeholder(tf.float32, shape=(None, GRID_SIZE, GRID_SIZE, channels))
+
+	return input_layer, last_layer, s, make_input, NONE_STATE
+
+def five_dense_1024(mask):
+	shape = NUM_STATE * POWER if mask else NUM_STATE
+
+	input_layer = Input(batch_shape=(None, shape))
+	l_dense0 = Dense(1024, activation='relu')(input_layer)
+	l_dense1 = Dense(1024, activation='relu')(l_dense0)
+	l_dense2 = Dense(1024, activation='relu')(l_dense1)
+	l_dense3 = Dense(1024, activation='relu')(l_dense2)
+	last_layer = Dense(1024, activation='relu')(l_dense3)
+
+	NONE_STATE = np.zeros(shape)
+	s = tf.placeholder(tf.float32, shape=(None, shape))
+	make_input = make_input_1 if mask else make_input_0
+
+	return input_layer, last_layer, s, make_input, NONE_STATE
+
 NNs = [
 	only_dense_5_layers_256,
 	conv2x2_layer_and_3_dense,
@@ -177,7 +244,12 @@ NNs = [
 	two_conv_rect_layers_merge_with_input_and_3_dense,
 
 	conv2x2_layer_and_2_dense_512,
-	two_dense_1024
+	two_dense_1024,
+
+	four_conv_rect_1024_layers,
+	conv2x2_only,
+	conv2x2_4096_and_two_dense_1024,
+	five_dense_1024
 ]
 
 def getNN(num=0, mask=False):
