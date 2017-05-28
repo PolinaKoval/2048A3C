@@ -146,7 +146,7 @@ class Game2048(object):
         if self.env_type == 1:
             reward = -1 if not moved else min(reward, 1)
 
-        is_terminated_state = self.won or self.over
+        is_terminated_state = self.over
         if self.env_type == 2:
             is_terminated_state = is_terminated_state or not moved
 
