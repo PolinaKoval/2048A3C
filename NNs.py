@@ -169,15 +169,15 @@ def two_dense_1024(mask):
 	return input_layer, last_layer, s, make_input, NONE_STATE
 
 
-def four_conv_rect_1024_layers(mask):
+def four_conv_rect_512_layers(mask):
 	channels = POWER if mask else 1
 	shape = (GRID_SIZE, GRID_SIZE, channels)
 
 	input_layer = Input(shape=shape)
-	conv_layer_a = Convolution2D(1024, (2, 1), activation='relu')(input_layer)
-	conv_layer_b = Convolution2D(1024, (1, 2), activation='relu')(input_layer)
-	conv_layer_ab = Convolution2D(1024, (1, 2), activation='relu')(conv_layer_a)
-	conv_layer_ba = Convolution2D(1024, (2, 1), activation='relu')(conv_layer_b)
+	conv_layer_a = Convolution2D(512, (2, 1), activation='relu')(input_layer)
+	conv_layer_b = Convolution2D(512, (1, 2), activation='relu')(input_layer)
+	conv_layer_ab = Convolution2D(512, (1, 2), activation='relu')(conv_layer_a)
+	conv_layer_ba = Convolution2D(512, (2, 1), activation='relu')(conv_layer_b)
 	ft = Flatten()
 	merge_layer = concatenate([ft(x) for x in[conv_layer_ab, conv_layer_ba, conv_layer_a, conv_layer_b]])
 	last_layer = Dense(32, activation='relu')(merge_layer)
@@ -246,7 +246,7 @@ NNs = [
 	conv2x2_layer_and_2_dense_512,
 	two_dense_1024,
 
-	four_conv_rect_1024_layers,
+	four_conv_rect_512_layers,
 	conv2x2_only,
 	conv2x2_4096_and_two_dense_1024,
 	five_dense_1024

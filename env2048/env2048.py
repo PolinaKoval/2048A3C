@@ -32,6 +32,7 @@ class Game2048(object):
         self.won = False
         self.grid = Grid(self.size)
         self.score = 0
+        self.win_count = 0
 
     def reset(self):
         self.over = False
@@ -123,8 +124,7 @@ class Game2048(object):
                     next_cell.value = new_value
                     self.score += new_value
                     if new_value == 2048:
-                        with open('won.txt', 'w') as file:
-                            file.write(str(self.grid.get_values()));
+                        self.win_count += 1
                         self.won = True
                     moved = True
 
