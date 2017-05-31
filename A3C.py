@@ -18,6 +18,9 @@ parser.add_argument('-p', action="store_true")  # print score
 parser.add_argument("--time", "-t", type=int, default=72000)
 parser.add_argument("--env_type", type=int, default=0)
 parser.add_argument("--nn_type", type=int, default=0)
+parser.add_argument("--batch_size", type=int, default=200)
+parser.add_argument("--part", type=int, default=0)
+parser.add_argument("--lr", type=float, default=5e-4)
 parser.add_argument('--mask', action="store_true")
 args = parser.parse_args()
 
@@ -35,17 +38,16 @@ N_STEP_RETURN = 1
 GAMMA_N = GAMMA ** N_STEP_RETURN
 
 EPS_START = 0.9
-EPS_STOP = .05
-EPS_STEPS = 175000
+EPS_STOP = .01
+EPS_STEPS = 1e6
 
-MIN_BATCH = 100
-LEARNING_RATE = 5e-3
+MIN_BATCH = args.batch_size
+LEARNING_RATE = args.lr
 
 LOSS_V = .4  # v loss coefficient
 LOSS_ENTROPY = .01  # entropy coefficient
-POWER = 11
-STAT_FILE = "experiments/part2/nn{}_env{}_mask{}_Stat.csv".format(args.nn_type, args.env_type, args.mask)
-WEIGHTS_FILE = "experiments/part2/nn{}_env{}_mask{}_weights.h5".format(args.nn_type, args.env_type, args.mask)
+STAT_FILE = "experiments/part{}/nn{}_env{}_mask{}_Stat.csv".format(args.part, args.nn_type, args.env_type, args.mask)
+WEIGHTS_FILE = "experiments/part{}/nn{}_env{}_mask{}_weights.h5".format(args.part, args.nn_type, args.env_type, args.mask)
 
 # ---------
 class Brain:
