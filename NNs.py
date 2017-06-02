@@ -252,16 +252,18 @@ def two_conv_rect_512_layers_merge_with_input_and_one_dense(mask):
 
 	return input_layer, last_layer, s, make_input, NONE_STATE
 
-def conv_rect_512_and_conv2x2(mask):
+
+def four_conv_rect_and_2x2_layers(mask):
 	channels = POWER if mask else 1
 	shape = (GRID_SIZE, GRID_SIZE, channels)
 
 	input_layer = Input(shape=shape)
 	conv_layer21 = Convolution2D(512, (2, 1), activation='relu')(input_layer)
 	conv_layer12 = Convolution2D(512, (1, 2), activation='relu')(input_layer)
-	conv_layer22 = Convolution2D(512, (2, 2), activation='relu')(input_layer)
+	conv_layer221 = Convolution2D(1024, (3, 3), activation='relu')(conv_layer21)
+	conv_layer222 = Convolution2D(1024, (3, 3), activation='relu')(conv_layer12)
 	ft = Flatten()
-	merge_layer = concatenate([ft(conv_layer21), ft(conv_layer12), ft(conv_layer22)])
+	merge_layer = concatenate([ft(conv_layer221), ft(conv_layer222)])
 	last_layer = Dense(512, activation='relu')(merge_layer)
 
 	NONE_STATE = np.zeros(shape=shape)
@@ -286,7 +288,7 @@ NNs = [
 	conv2x2_1024_and_two_dense_1024,
 	five_dense_1024,
 	two_conv_rect_512_layers_merge_with_input_and_one_dense,
-	conv_rect_512_and_conv2x2
+	four_conv_rect_and_2x2_layers
 ]
 
 def getNN(num=0, mask=False):

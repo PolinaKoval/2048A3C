@@ -321,7 +321,7 @@ class Optimizer(threading.Thread):
 
 
 # -- main
-env_test = Environment(eps_start=0.01, eps_end=0.01, env_type=args.env_type)
+env_test = Environment(eps_start=0.001, eps_end=0.001, env_type=args.env_type)
 NUM_STATE = env_test.env.observation_space
 NUM_ACTIONS = env_test.env.action_space
 
