@@ -21,6 +21,7 @@ parser.add_argument("--nn_type", type=int, default=0)
 parser.add_argument("--batch_size", type=int, default=200)
 parser.add_argument("--part", type=int, default=0)
 parser.add_argument("--lr", type=float, default=5e-4)
+parser.add_argument("--eps_start", type=float, default=0.9)
 parser.add_argument('--mask', action="store_true")
 args = parser.parse_args()
 
@@ -37,9 +38,9 @@ GAMMA = 0.99
 N_STEP_RETURN = 1
 GAMMA_N = GAMMA ** N_STEP_RETURN
 
-EPS_START = 0.9
+EPS_START = args.eps_start
 EPS_STOP = .001
-EPS_STEPS = 5e6
+EPS_STEPS = 1e6
 
 MIN_BATCH = args.batch_size
 LEARNING_RATE = args.lr
@@ -268,13 +269,18 @@ class Environment(threading.Thread):
 		s = brain.make_input(s)
 		R = 0
 		moved = True
+		k = 0;
+		m = 0;
 		while True:
+			k+=1
 			time.sleep(THREAD_DELAY)  # yield
 
 			if self.render: self.env.render()
 
 			a = self.agent.act(s)
 			s_, r, done, moved = self.env.step(a)
+			if moved:
+				m+=1
 			s_ = brain.make_input(s_)
 			if done:  # terminal state
 				s_ = None
@@ -294,8 +300,10 @@ class Environment(threading.Thread):
 			scores.pop(0)
 
 		if args.p:
-			print("Total R:{}\n".format(self.env.score))
-			print "episode {} average {} wins {}".format(len(scores), np.average(scores), self.env.win_count)
+			print k, m
+			print self.env.grid.get_values()
+			print("Total R:{}".format(self.env.score))
+			print "episode {} average {} wins {}\n".format(len(scores), np.average(scores), self.env.win_count)
 
 	def run(self):
 		while not self.stop_signal:

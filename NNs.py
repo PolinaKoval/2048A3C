@@ -260,11 +260,11 @@ def four_conv_rect_and_2x2_layers(mask):
 	input_layer = Input(shape=shape)
 	conv_layer21 = Convolution2D(512, (2, 1), activation='relu')(input_layer)
 	conv_layer12 = Convolution2D(512, (1, 2), activation='relu')(input_layer)
-	conv_layer221 = Convolution2D(1024, (3, 3), activation='relu')(conv_layer21)
-	conv_layer222 = Convolution2D(1024, (3, 3), activation='relu')(conv_layer12)
+	conv_layer221 = Convolution2D(256, (3, 3), activation='relu')(conv_layer21)
+	conv_layer222 = Convolution2D(256, (3, 3), activation='relu')(conv_layer12)
 	ft = Flatten()
 	merge_layer = concatenate([ft(conv_layer221), ft(conv_layer222)])
-	last_layer = Dense(512, activation='relu')(merge_layer)
+	last_layer = Dense(256, activation='relu')(merge_layer)
 
 	NONE_STATE = np.zeros(shape=shape)
 	make_input = make_input_3 if mask else make_input_2
