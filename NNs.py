@@ -270,6 +270,23 @@ def two_conv_rect_1024_layers_merge_with_input_and_one_dense(mask):
 
 	return input_layer, last_layer, s, make_input, NONE_STATE
 
+def two_conv_128_layers_merge_with_input_and_one_dense(mask):
+	channels = POWER if mask else 1
+	shape = (GRID_SIZE, GRID_SIZE, channels)
+
+	input_layer = Input(shape=shape)
+	conv_layer1 = Convolution2D(128, (2, 2), activation='relu')(input_layer)
+	conv_layer2 = Convolution2D(128, (3, 3), activation='relu')(conv_layer1)
+	ft = Flatten()
+	merge_layer = concatenate([ft(conv_layer1), ft(conv_layer2), ft(input_layer)])
+	last_layer = Dense(54, activation='relu')(merge_layer)
+
+	NONE_STATE = np.zeros(shape=shape)
+	make_input = make_input_3 if mask else make_input_2
+	s = tf.placeholder(tf.float32, shape=(None, GRID_SIZE, GRID_SIZE, channels))
+
+	return input_layer, last_layer, s, make_input, NONE_STATE
+
 NNs = [
 	only_dense_5_layers_256,
 	conv2x2_layer_and_3_dense,
@@ -286,7 +303,8 @@ NNs = [
 	conv2x2_1024_and_two_dense_1024,
 	five_dense_1024,
 	two_conv_rect_512_layers_merge_with_input_and_one_dense,
-	two_conv_rect_1024_layers_merge_with_input_and_one_dense
+	two_conv_rect_1024_layers_merge_with_input_and_one_dense,
+	two_conv_128_layers_merge_with_input_and_one_dense
 ]
 
 def getNN(num=0, mask=False):
