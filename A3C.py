@@ -289,6 +289,8 @@ class Environment(threading.Thread):
 
 			s = s_
 			R += r
+			if R < -100:
+				break
 			if done or self.stop_signal:
 				break
 

@@ -29,12 +29,19 @@ def play_game():
 		state, reward, done, moved = env.step(best_a)
 
 		if done:
-			return env.score
+			return env.score, np.max(env.grid.get_values())
 
 
 scores = []
+max_cell = {}
 for i in range(10000):
-	print i
-	scores.append(play_game())
+	# print i
+	score, cell = play_game();
+	scores.append(score)
+	if cell not in max_cell:
+		max_cell[cell] = 1
+	else:
+		max_cell[cell] += 1
 
 print np.average(scores), np.max(scores), np.min(scores), np.median(scores)
+print max_cell
